@@ -44,15 +44,22 @@ const UserType = new GraphQLObjectType({
 const RootQuery = new GraphQLObjectType({
    name: 'RootQueryType',
    fields: {
-       user: {
+        user: {
            type: UserType,
            args: { id: { type: GraphQLString } },
            resolve(parentValue, args) {
                 return axios.get(`http://localhost:3000/users/${args.id}`)
                 .then(resp => resp.data);
+           },
+        },
+        users: {
+            type: new GraphQLList(UserType),
+            resolve(parentValue, args) {
+                return axios.get('http://localhost:3000/users')
+                .then(resp => resp.data);
            }
-       },
-       company: {
+        },
+        company: {
             type: CompanyType,
             args: { id: { type: GraphQLString } },
             resolve(parentValue, args) {
@@ -75,18 +82,24 @@ const mutation = new GraphQLObjectType({
             },
             resolve(parentValue, { firstName, age }) {
                 return axios.post('http://localhost:3000/users', { firstName, age })
-                    .then(res => res.data);
+                    .then(res => res);
             }
         },
         deleteUser: {
-            type: UserType,
+            type: new GraphQLList(UserType),
             args: {
                 id: { type: GraphQLString }
             },
             resolve(parentValue, args) {
-                return axios.delete(`http://localhost:3000/users/${args.id}`)
-                    .then(res => res.data);
-            }
+                /* return axios.get('http://localhost:3000/users')
+                    .then(res => res.data) */
+                /* return axios.delete(`http://localhost:3000/users/${args.id}`)
+                    .then(axios.get('http://localhost:3000/users')
+                        .then(res => res.data)
+                    ); */
+                return Promise.all([axios.delete(`http://localhost:3000/users/${args.id}`), axios.get('http://localhost:3000/users')])
+                    .then(([res1, res2]) => res2.data)
+            },
         },
         editUser: {
             type: UserType,
@@ -102,7 +115,7 @@ const mutation = new GraphQLObjectType({
             }
         }
     }
-})
+});
 
 module.exports = new GraphQLSchema({
     query: RootQuery,
